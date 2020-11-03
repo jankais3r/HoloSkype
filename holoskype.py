@@ -8,6 +8,7 @@ from socketserver import ThreadingMixIn
 from http.server import BaseHTTPRequestHandler, HTTPServer
 try:
     import cv2
+    import numpy as np
 except:
     print('Install OpenCV with "pip3 install opencv-python"')
     quit()
@@ -43,6 +44,40 @@ class CamHandler(BaseHTTPRequestHandler):
                 self.wfile.write(bytearray(buf))
             return
         
+        if self.path.endswith('/edge.mjpg'):
+            self.send_response(200)
+            self.send_header('Content-type', 'multipart/x-mixed-replace; boundary=--jpgboundary')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            while True:
+                if(edgeframe.any() != None):
+                    pass
+                r, buf = cv2.imencode('.jpg', edgeframe, jpegQuality)
+                try:
+                    self.wfile.write('--jpgboundary\r\n'.encode())
+                    self.end_headers()
+                    self.wfile.write(bytearray(buf))
+                except:
+                    pass
+            return
+        
+        if self.path.endswith('/jet.mjpg'):
+            self.send_response(200)
+            self.send_header('Content-type', 'multipart/x-mixed-replace; boundary=--jpgboundary')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            while True:
+                if(jetframe.any() != None):
+                    pass
+                r, buf = cv2.imencode('.jpg', jetframe, jpegQuality)
+                try:
+                    self.wfile.write('--jpgboundary\r\n'.encode())
+                    self.end_headers()
+                    self.wfile.write(bytearray(buf))
+                except:
+                    pass
+            return
+        
         if self.path.endswith('/depth.mjpg'):
             self.send_response(200)
             self.send_header('Content-type', 'multipart/x-mixed-replace; boundary=--jpgboundary')
@@ -52,15 +87,32 @@ class CamHandler(BaseHTTPRequestHandler):
                 if(depthframe.any() != None):
                     pass
                 r, buf = cv2.imencode('.jpg', depthframe, jpegQuality)
-                self.wfile.write('--jpgboundary\r\n'.encode())
-                self.end_headers()
-                self.wfile.write(bytearray(buf))
+                try:
+                    self.wfile.write('--jpgboundary\r\n'.encode())
+                    self.end_headers()
+                    self.wfile.write(bytearray(buf))
+                except:
+                    pass
             return
-
-        if self.path.endswith('holo.html'):
+        
+        if self.path.endswith('holo.html') or self.path.endswith('holo_edge.html') or self.path.endswith('holo_jet.html'):
+            if self.path.endswith('holo_edge.html'):
+                texture = 'edge'
+            elif self.path.endswith('holo_jet.html'):
+                texture = 'jet'
+            else:
+                texture = 'rgb'
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
+            if sensor == 'faceid':
+                skip = 3
+                size = 7
+                depthspread = 1800
+            elif sensor == 'lidar':
+                skip = 1
+                size = 5
+                depthspread = 1500
             self.wfile.write(('''<!DOCTYPE html>
             <html>
             <head>
@@ -116,7 +168,7 @@ class CamHandler(BaseHTTPRequestHandler):
                     }
                     async function main() {
                         var images = await Promise.all([
-                            loadImage("http://''' + ip + ':' + str(port) + '''/rgb.mjpg"),
+                            loadImage("http://''' + ip + ':' + str(port) + '''/''' + texture + '''.mjpg"),
                             loadImage("http://''' + ip + ':' + str(port) + '''/depth.mjpg")
                         ]);
                         var data = images.map(getImageData);
@@ -127,20 +179,20 @@ class CamHandler(BaseHTTPRequestHandler):
                         var aspect = 2;
                         var near = 1;
                         var far = 4000;
-                        var size = 15; // size of points - decrease for more "pointy cloudy" feel
+                        var size = ''' + str(size) + '''; // size of points - decrease for more "pointy cloudy" feel
                         var camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
                         camera.position.z = 2500;
                         var scene = new THREE.Scene();
                         var holoplay = new HoloPlay(scene, camera, renderer);
                         var rgbData = data[0];
                         var depthData = data[1];
-                        var skip = 4; // space between points - increase for better FPS
+                        var skip = ''' + str(skip) + '''; // space between points - increase for better FPS
                         var across = Math.ceil(rgbData.width / skip);
                         var down = Math.ceil(rgbData.height / skip);
                         var positions = [];
                         var colors = [];
                         var spread = 800;
-                        var depthSpread = 2000;
+                        var depthSpread = ''' + str(depthspread) + ''';
                         var size = size;
                         var imageAspect = 1.67; //rgbData.width / rgbData.height
                         for(let y = 0; y < down; ++y) {
@@ -240,15 +292,19 @@ class CamHandler(BaseHTTPRequestHandler):
             </body>
             </html>''').encode())
             return
-
+        
         if self.path.endswith('cameras.html') or self.path == '/':
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
             self.wfile.write('<html><head></head><body>'.encode())
-            self.wfile.write(('<img src="http://' + ip + ':' + str(port) + '/rgb.mjpg"/>').encode())
-            self.wfile.write(('<img src="http://' + ip + ':' + str(port) + '/depth.mjpg"/>').encode())
-            self.wfile.write(('<br><a href="http://' + ip + ':' + str(port) + '/holo.html" target="_blank">Open Holo window</a>').encode())
+            self.wfile.write(('<img src="http://' + ip + ':' + str(port) + '/rgb.mjpg" style="max-width: 33%"/>').encode())
+            self.wfile.write(('<img src="http://' + ip + ':' + str(port) + '/edge.mjpg" style="max-width: 33%"/>').encode())
+            self.wfile.write(('<br><img src="http://' + ip + ':' + str(port) + '/depth.mjpg" style="max-width: 33%"/>').encode())
+            self.wfile.write(('<img src="http://' + ip + ':' + str(port) + '/jet.mjpg" style="max-width: 33%"/>').encode())
+            self.wfile.write(('<br><a href="http://' + ip + ':' + str(port) + '/holo.html">Open HoloSkype</a>').encode())
+            self.wfile.write(('<br><a href="http://' + ip + ':' + str(port) + '/holo_edge.html">Open HoloSkype with edge effect</a>').encode())
+            self.wfile.write(('<br><a href="http://' + ip + ':' + str(port) + '/holo_jet.html">Open HoloSkype with jet effect</a>').encode())
             self.wfile.write('</body></html>'.encode())
             return
 
@@ -259,16 +315,16 @@ class StreamerApp:
     def __init__(self):
         self.event = Event()
         self.session = None
-
+    
     def on_new_frame(self):
         """
         This method is called from non-main thread, therefore cannot be used for presenting UI.
         """
         self.event.set()  # Notify the main thread to stop waiting and process new frame.
-
+    
     def on_stream_stopped(self):
         print('Stream stopped')
-
+    
     def connect_to_device(self, dev_idx):
         print('Searching for devices')
         devs = Record3DStream.get_connected_devices()
@@ -279,15 +335,15 @@ class StreamerApp:
         if len(devs) <= dev_idx:
             raise RuntimeError('Cannot connect to device #{}, try different index.'
                                .format(dev_idx))
-
+        
         dev = devs[dev_idx]
         self.session = Record3DStream()
         self.session.on_new_frame = self.on_new_frame
         self.session.on_stream_stopped = self.on_stream_stopped
         self.session.connect(dev)  # Initiate connection and start capturing
-
+    
     def start_processing_stream(self):
-        global rgbframe, depthframe, ip, port
+        global rgbframe, edgeframe, jetframe, depthframe, ip, port, sensor
         server = ThreadedHTTPServer(('0.0.0.0', port), CamHandler)
         print('Starting server on address ' + ip + ':' + str(port))
         target = Thread(target=server.serve_forever,args=())
@@ -295,41 +351,66 @@ class StreamerApp:
         
         while True:
             self.event.wait()  # Wait for new frame to arrive
-
+            
             # Copy the newly arrived RGBD frame
             depth = self.session.get_depth_frame()
             rgb = self.session.get_rgb_frame()
             #intrinsic_mat = self.get_intrinsic_mat_from_coeffs(self.session.get_intrinsic_mat())
             # You can now e.g. create point cloud by projecting the depth map using the intrinsic matrix.
-
-            # Postprocess it
-            are_truedepth_camera_data_being_streamed = depth.shape[0] == 640
-            if are_truedepth_camera_data_being_streamed:
+            
+            # FaceID
+            if depth.shape[0] == 640:
+                sensor = 'faceid'
                 depth = cv2.flip(depth, 1)
-                depth = cv2.rotate(depth, cv2.cv2.ROTATE_90_CLOCKWISE)
+                depth = cv2.rotate(depth, cv2.cv2.ROTATE_90_COUNTERCLOCKWISE)
                 rgb = cv2.flip(rgb, 1)
-                rgb = cv2.rotate(rgb, cv2.cv2.ROTATE_90_CLOCKWISE)
-
+                rgb = cv2.rotate(rgb, cv2.cv2.ROTATE_90_COUNTERCLOCKWISE)
+                depth = img_as_ubyte(depth)
+                jet = cv2.applyColorMap(depth, cv2.COLORMAP_JET)
+            
+            # LiDAR
+            if depth.shape[0] == 256:
+                sensor = 'lidar'
+                depth = cv2.rotate(depth, cv2.cv2.ROTATE_90_COUNTERCLOCKWISE)
+                rgb = cv2.rotate(rgb, cv2.cv2.ROTATE_90_COUNTERCLOCKWISE)
+                try:
+                    depth *= (255.0/depth.max()).astype(depth.dtype)
+                    jet = cv2.applyColorMap(np.uint8(depth), cv2.COLORMAP_JET)
+                except Exception as e:
+                    print(e)
+                    print(np.min(depth))
+                    print(np.max(depth))
+            
+            gray = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY)
+            edges = cv2.Canny(gray, 150, 200)
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+            dilate = cv2.dilate(edges, kernel, iterations = 1)
+            ret, edge = cv2.threshold(dilate, 100, 255, cv2.THRESH_BINARY_INV)
+            
             rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-            depth = img_as_ubyte(depth)
-            #depth2 = cv2.applyColorMap(depth, cv2.COLORMAP_JET);
             
             # Show the RGBD Stream
             #cv2.imshow('RGB', rgb)
-            #cv2.imshow('Depth', depth)
-            #cv2.imshow('Depth Map', depth2)
+            #cv2.imshow('Edges', edge)
+            #cv2.imshow('Depth', depthx)
+            #cv2.imshow('Depth Map', jet)
             cv2.waitKey(1)
             
             rgbframe = rgb
+            edgeframe = edge
+            jetframe = jet
             depthframe = depth
             if(i == 0):
                 target.start()
-            i +=1
-
+            i = 1
+            
             self.event.clear()
-
 
 if __name__ == '__main__':
     app = StreamerApp()
-    app.connect_to_device(dev_idx = 0)
+    try:
+        app.connect_to_device(dev_idx = 0)
+    except:
+        print('No devices found')
+        quit()
     app.start_processing_stream()
