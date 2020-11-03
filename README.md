@@ -15,7 +15,7 @@ FaceID to Hologram all-in-one script
 
 You don't need two computers, Client and Server can be the same machine.
 
-![Demo](https://github.com/jankais3r/HoloSkype/blob/master/demo.gif)
+![Demo](https://github.com/jankais3r/HoloSkype/blob/main/demo.gif)
 
 See it in action [here](https://twitter.com/jankais3r/status/1314972971967143937).
 
