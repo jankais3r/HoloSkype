@@ -21,6 +21,7 @@ See it in action [here](https://twitter.com/jankais3r/status/1314972971967143937
 
 ## To-do
 - [x] Initial release
+- [ ] Add LiDAR sensor support
 - [ ] Add WebKit compatibility
 - [ ] Port to HoloPlay.js v1.0+
 
