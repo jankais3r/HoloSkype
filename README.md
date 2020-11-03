@@ -21,13 +21,15 @@ See it in action [here](https://twitter.com/jankais3r/status/1314972971967143937
 
 ## To-do
 - [x] Initial release
-- [ ] Add LiDAR sensor support
-- [ ] Add WebKit compatibility
+- [x] LiDAR sensor support
+- [x] Texture effects (Edge/Jet)
+- [ ] WebKit compatibility
 - [ ] Port to HoloPlay.js v1.0+
 
 
 ## Inspiration
 I saw [this demo](https://twitter.com/asidys230/status/1242135956456501248) made with Unity and I decided to re-create it using open web technologies.
+[This demo](https://twitter.com/tks_yoshinaga/status/1323490627271630849) then inspired me to add the edge effect.
 
 ## References:
 1) Record3d Python Demo App \[[link](https://github.com/marek-simonik/record3d)]
