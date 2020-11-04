@@ -17,7 +17,7 @@ You don't need two computers, Client and Server can be the same machine.
 
 ![Demo](https://github.com/jankais3r/HoloSkype/blob/main/demo.gif)
 
-See it in action [here](https://twitter.com/jankais3r/status/1314972971967143937).
+See it in action [here](https://twitter.com/jankais3r/status/1314972971967143937) and [here](https://twitter.com/jankais3r/status/1323772811048005633).
 
 ## To-do
 - [x] Initial release
